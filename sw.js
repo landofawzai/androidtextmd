@@ -1,17 +1,24 @@
 const CACHE = 'md-editor-v1';
 const SHARE_CACHE = 'md-editor-share';
+
+// All paths are scope-relative so the SW works at any subpath (e.g. GitHub Pages).
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/styles.css',
-  '/manifest.webmanifest',
-  '/vendor/marked.min.js',
-  '/vendor/purify.min.js',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable.png'
+  './',
+  './index.html',
+  './app.js',
+  './styles.css',
+  './manifest.webmanifest',
+  './vendor/marked.min.js',
+  './vendor/purify.min.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable.png'
 ];
+
+const SCOPE_URL = new URL('./', self.location);
+const SHARE_PATH = new URL('share', SCOPE_URL).pathname;
+const PENDING_SHARE_URL = new URL('__pending_share__', SCOPE_URL).toString();
+const REDIRECT_URL = new URL('./?shared=1', SCOPE_URL).toString();
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -49,19 +56,19 @@ async function handleShare(request) {
 
   const cache = await caches.open(SHARE_CACHE);
   await cache.put(
-    '/__pending_share__',
+    PENDING_SHARE_URL,
     new Response(JSON.stringify(payload), {
       headers: { 'Content-Type': 'application/json' }
     })
   );
 
-  return Response.redirect('/?shared=1', 303);
+  return Response.redirect(REDIRECT_URL, 303);
 }
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  if (event.request.method === 'POST' && url.pathname === '/share') {
+  if (event.request.method === 'POST' && url.pathname === SHARE_PATH) {
     event.respondWith(handleShare(event.request));
     return;
   }
@@ -74,7 +81,7 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
       return fetch(event.request).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match(new URL('./index.html', SCOPE_URL).toString());
         }
         return Response.error();
       });

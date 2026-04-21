@@ -246,16 +246,18 @@ ${bodyHtml}
   async function consumePendingShare() {
     const params = new URLSearchParams(location.search);
     if (!params.has('shared')) return null;
+    const scopeBase = new URL('./', location.href);
+    const pendingUrl = new URL('__pending_share__', scopeBase).toString();
     try {
       const cache = await caches.open('md-editor-share');
-      const response = await cache.match('/__pending_share__');
+      const response = await cache.match(pendingUrl);
       if (!response) return null;
-      await cache.delete('/__pending_share__');
+      await cache.delete(pendingUrl);
       return await response.json();
     } catch (_) {
       return null;
     } finally {
-      history.replaceState(null, '', '/');
+      history.replaceState(null, '', scopeBase.pathname);
     }
   }
 
@@ -342,7 +344,7 @@ ${bodyHtml}
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
-    navigator.serviceWorker.register('/sw.js').catch(err => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
       console.warn('SW registration failed', err);
     });
   }
